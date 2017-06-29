@@ -1,0 +1,168 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jun 19 15:12:37 2017
+
+@author: viper
+
+
+"""
+# Modules....
+import matplotlib
+matplotlib.use('pgf')
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage import io
+from skimage import transform
+from skimage import filters
+
+def getVanishingPoint(image):
+    orientationMatrix = getOrientationMatrix(image)
+    vanishingPoint = vanishingPointVote(orientationMatrix, sigma =0.25)
+    return vanishingPoint
+
+""" Auxiliary functions """
+
+def getOrientationMatrix(image):
+    """ As seen in 'Fast Vanishing-Point Detection in Unstructured Environments'
+        Peyman Moghadam and al.
+    """
+    f = 0.95
+    gabor0= filters.gabor(image, frequency = f, theta = 0)
+    gabor45= filters.gabor(image, frequency = f, theta = np.pi/4)
+    gabor90= filters.gabor(image, frequency = f, theta = np.pi/2)
+    gabor135= filters.gabor(image, frequency = f, theta = 3*np.pi/4)
+    energyMatrix0, energyMatrix45, energyMatrix90, energyMatrix135= getEnergyMatrix(gabor0), getEnergyMatrix(gabor45), getEnergyMatrix(gabor90), getEnergyMatrix(gabor135)
+    orientationMatrix = np.zeros(image.shape)
+    w, h = image.shape
+    for i in range(w):
+        for j in range(h):
+            sortedList, phi1,phi2 = getSortedEnergies(energyMatrix0, energyMatrix45, energyMatrix90, energyMatrix135,i,j)
+            orientationMatrix[i,j] = getOrientation(sortedList, phi1,phi2)
+    return orientationMatrix
+
+def vanishingPointVote(orientationMatrix, sigma = 0.25):
+    w, h = orientationMatrix.shape
+    accumulator = np.zeros(orientationMatrix.shape, dtype=np.float64)
+    for i in range(w):
+        for j in range(h):
+            rayPoints = getRay(orientationMatrix, i, j)
+            D = getRayDistance2Perimeter(rayPoints, i, j)
+            #plt.plot(rayPoints)
+            for k,l in rayPoints:
+                weight = getRayPointWeight(i,j,k,l, D,sigma)
+                accumulator[k][l] += weight
+
+    index = (0,0)
+    amax = accumulator[0][0]
+    for i in range(w):
+        for j in range(h):
+            if accumulator[i][j]>amax:
+                index = (i,j)
+                amax = accumulator[i][j]
+    plt.figure(1)
+    plt.imshow(accumulator, cmap = 'gray')
+    vanishingPoint = index
+    print(index)
+
+    return vanishingPoint
+
+def getSortedEnergies(gabor0, gabor45, gabor90, gabor135,i,j):
+    """ As seen in 'Fast Vanishing-Point Detection in Unstructured Environments'
+        Peyman Moghadam and al.
+    """
+    e0 = gabor0[i,j]
+    e1 = gabor45[i,j]
+    e2 = gabor90[i,j]
+    e3 = gabor135[i,j]
+    sortedList=[(e0,0), (e1,45), (e2,90), (e3,135)]
+    sortedList.sort(reverse=True)
+    phi1 = sortedList[0][1]
+    phi2 = sortedList[1][1]
+    return sortedList, phi1, phi2
+
+def getOrientation(sortedList, phi1, phi2):
+    e1, e2, e3, e4 = sortedList[0][0], sortedList[1][0],sortedList[2][0],sortedList[3][0]
+    S1 = (e1-e4)*np.exp(1j*np.deg2rad(phi1))
+    S2 = (e2-e3)*np.exp(1j*np.deg2rad(phi2))
+    V = S1 + S2
+    Vx, Vy = np.real(V), np.imag(V)
+    orientationEstimate  = np.arctan(Vy/Vx) # In radians !y
+    return orientationEstimate
+    
+def getEnergyMatrix(gaborImages):
+    realGabor, imagGabor = gaborImages
+    jGabor = realGabor + 1j*imagGabor
+    energyMatrix = np.power(np.absolute(jGabor),2)
+    return energyMatrix
+
+def getRay(orientationMatrix, i,j):
+    # TODO : reduce the number of operations in this function
+    w, h = orientationMatrix.shape
+    orientation = orientationMatrix[i,j]-np.pi/2
+    rayPoints = []
+    try:
+        x=h-j-1
+        y=w-i-1
+        a, b = np.cos(np.pi/2 +orientation),  -np.sin(np.pi/2 +orientation)
+        c = -a*x-b*y
+        x1 = min(max(0,int(-c/a)), h-1)
+        x2 = min(max(0,int(-(c+b*(w-1)/a))), h-1)
+        l=[x1 ,x2]
+        l.sort()
+        xmin, xmax = l
+        if np.abs(b)< 10**(-12):
+            for i in range(w):
+                rayPoints.append((i, j))
+        else:
+            for x in range(xmin, xmax):
+                x_, y_ = x, -1/b*(c+a*x)
+                if x_<0 or y_<0 or x_>h-1 or y_>w-1:
+                    ()
+                else:
+                    rayPoints.append( (int(w-y_-1) , int(h-x_-1) ))
+    except ValueError as e:
+        print(e)
+
+
+    return rayPoints
+
+
+def getRayDistance2Perimeter(rayPoints, i, j):
+    # Warning : square 
+    try :
+        fx, fy = rayPoints[0]
+        lx, ly = rayPoints[len(rayPoints)-1]
+        D = max( (i-fx)**2+(j-fy)**2 , (i-lx)**2 + (j-ly)**2)+1
+    except IndexError :
+        D = 1
+    return D
+def getRayPointWeight(i,j,k,l, D,sigma):
+    d = ( (i-k)**2 + (j-l)**2 )/D
+    pointWeight = np.exp(-d/(2*sigma**2))
+    return pointWeight
+
+im = io.imread('I0_0.tiff')
+im = io.imread('move1-angle/I0_1.tiff')
+
+#im= transform.rescale(image, 0.5)
+l=[]
+i, j = getVanishingPoint(im)
+plt.plot(j,i, 'or', ms=4)
+plt.imshow(im, cmap="gray")
+
+
+
+"""
+i=50
+j=80
+
+m =getOrientationMatrix(im)
+m[i,j]=0
+print(np.rad2deg(m[i,j]))
+p = getRay(m, i, j)
+print(p)
+p = np.asarray(p)
+x,y = p.T
+plt.plot(y,x)
+"""
