@@ -5,6 +5,8 @@ Created on Tue Jun 20 10:19:31 2017
 
 @author: viper
 
+Description : 
+
 """
 
 from __future__ import print_function
@@ -30,24 +32,30 @@ import regiongrowing as rg
 
 plt.close('all')
 def featurePointMatching(image0, image1, decimation = 1, n_keypoints=750):
-    """ As seen at https://peerj.com/articles/453/#fig-5"""
+    """
+    Get a transformation model knowing 2 images
+    """    
+    # 2 images, possibly with a certain decimation factor (reduce the size of the image)
     image0 = transform.rescale(image0,1/float(decimation))
     image1 = transform.rescale(image1, 1/float(decimation))
-    orb = ORB(n_keypoints=n_keypoints, fast_threshold=0.05)
+    orb = ORB(n_keypoints=n_keypoints, fast_threshold=0.05) # definition of the ORB detector
+    # Get the keypoints from the first image
     orb.detect_and_extract(image0)
     keypoints1 = orb.keypoints
     descriptors1 = orb.descriptors
+    # Get the keypoints from the second image
     orb.detect_and_extract(image1)
     keypoints2 = orb.keypoints
     descriptors2 = orb.descriptors
+    # Matching of descriptors
     matches12 = match_descriptors(descriptors1, descriptors2, cross_check=True)
-    # Select keypoints from the source (image to be
-    # registered) and target (reference image).
+    # Select keypoints from both images with RANSAC algorithm
     src = keypoints1[matches12[:, 0]][:, ::-1]
     dst = keypoints2[matches12[:, 1]][:, ::-1]
     model_robust, inliers = \
         ransac((src, dst), transform.EuclideanTransform,
                min_samples=6, residual_threshold=2)
+    # Get the inliners
     outliers = inliers == False 
     return model_robust, inliers, outliers, src, dst
 
@@ -57,6 +65,9 @@ def getNewMarkers(model_robust, markers):
     return markers1
 
 def getRandomMarkersFromLabels(label):
+    """
+    Get a random point knowing labels
+    """
     w, h = label.shape
     marker1 = None
     marker2 = None
@@ -70,8 +81,9 @@ def getRandomMarkersFromLabels(label):
         else:
             ()
     return np.asarray([marker1, marker2])
+
 """
- Test 
+ Test ....
 image0 = io.imread('move1-stokes/S1_0.tiff')
 image1 = io.imread('move1-stokes/S1_1.tiff')
 

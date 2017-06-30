@@ -20,7 +20,7 @@ from skimage import color
 from skimage import filters
 from skimage import img_as_uint
 
-def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, sortDistances = False, noOrphans = False):
+def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, sortDistances = False, noOrphans = False, hasMaxPoints = False, maxPoints =5000):
     """
     Inputs :
         - image : a grayscale image
@@ -41,13 +41,14 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
     nIter=0
     nSeeds = len(seeds)
     nbRows, nbCols = image.shape
-
     if labels is None:
         labels = np.zeros(image.shape, dtype=np.int)
     else:
         # TODO : assert that the size of the label matrix is the same as the original image
         ()
     while toVisit != []:
+        if hasMaxPoints and nIter>maxPoints:
+            break
         point=(toVisit[0], toVisit[1])
         x,y = int(toVisit[0]), int(toVisit[1])
         nIter+=1
@@ -66,29 +67,39 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
             for candidate in neighboursList:
                 a,b = candidate
                 distances = np.append(distances, np.abs(int(image[x,y])-int(image[a,b])))
+            # If the distances are not set to be sorted
             if not sortDistances:
                 toVisitNext=[]
+                # Get all possible new points to visit
                 for i in range(len(neighboursList)):
                     candidate = neighboursList[i]
-                    if isAcceptable(point, candidate, labels, image, seeds,pixelThreshold, regionThreshold):
+                    # Test if the point currently processed is acceptable knowing the thresholds and forner labels
+                    if isAcceptable(point, candidate, labels, image, seeds,pixelThreshold, regionThreshold): # If it is acceptable,
+                        # add it to the list containing the next points to be visited
                         toVisitNext=np.append(toVisitNext, candidate)
                         a,b = candidate
                         labels[a,b]= seed
+                    # else, don't do anything
             else: # sortDistance = True
                 toVisitNext=[]
                 dataFrame=[]
+                # Get all possible new points to visit
                 for i in range(len(neighboursList)):
                     candidate = neighboursList[i]
+                    # Test if the point currently processed is acceptable knowing the thresholds and forner labels
                     if isAcceptable(point, candidate, labels, image, seeds,pixelThreshold, regionThreshold):
+                        # add it to the acceptable candidates list dataFrame
                         dataFrame.append([distances[i],candidate])
                         a,b = candidate
                         labels[a,b]= seed
-                dataFrame.sort()
+                    # else, don't do anything
+                dataFrame.sort() # Sort the candidates list according to distance
                 for _,candidate in dataFrame:
+                    # add it to the list containing the next points to be visited
                     toVisitNext=np.append(toVisitNext, candidate)
             # Treatment of pixels to be visited        
-            if toVisitNext is []: # i.e all neighbours are labeled
-                # then remove the point being treated
+            if toVisitNext is []: # no acceptable neighbour to visit next
+                # then remove the point being treated (the "seed")
                 toVisit = np.delete(toVisit,0)
                 toVisit = np.delete(toVisit,0) 
             else:
@@ -96,7 +107,7 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
                 toVisit = np.delete(toVisit,0)
                 toVisit = np.delete(toVisit,0)
                 toVisit = np.append(toVisit,toVisitNext)
-
+    # Function to get every non labeled pixel to one of the labeled zones
     if noOrphans:
         # To avoid point with label = 0 pop : array[:-1] 
         stack=[]
@@ -113,7 +124,7 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
                             labels[i,j]= seed
                         labels[x,y]=seed
             
-                    
+    # Return an image containing all the labeled pixelss
     return labels
             
 def isAcceptable(point, candidate,labels, image, seeds,pixelThreshold, regionThreshold):
@@ -180,6 +191,8 @@ def labelExtractor(image):
     return matrixList
 
 """
+
+Tests......
 
 plt.close('all') # Close all remaining figures
 
