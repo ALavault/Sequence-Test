@@ -13,7 +13,9 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 from skimage import io
-from skimage import data
+from skimage import exposure
+from skimage import transform
+
 from skimage.feature import (corner_harris, corner_subpix, corner_peaks,plot_matches)
 from skimage import morphology
 import matplotlib
@@ -29,14 +31,18 @@ from skimage import util
 import time as t
 import regiongrowing as rg
 import seqtoolbox as classifier
+import time
+plt.close('all')
 
+nfolder = 1
+nbIter= 25//4
 
-
-fileList = os.listdir(os.getcwd()+'/move1-angle')
+fileList = os.listdir(os.getcwd()+'/move'+str(nfolder)+'-angle')
+print(len(fileList),len(fileList)//4)
 fileList.sort()
 toTreat = []
 # Init
-image0 = io.imread('move1-angle/'+fileList[0])
+image0 = io.imread('move'+str(nfolder)+'-angle/'+fileList[0])
 #image0 = image0[:224,:]
 plt.imshow(image0, cmap='gray')
 
@@ -52,8 +58,9 @@ markers.astype(int) # Integer coordinates
 plt.close('all')
 fnames=['AoP_','DoP_' , 'I0_', 'I45_', 'I90_', 'I135_','S0_', 'S1_', 'S2_']
 markersOrigin = markers.copy()
+timeList=[]
+square = morphology.square(3)
 for fname in fnames:
-    print(fname)
     if fname[0]=='A' or fname[0]=='D':
         folder = 'polar'
     elif fname[0]=='I':
@@ -63,49 +70,55 @@ for fname in fnames:
     else:
         ()
     markers=markersOrigin.copy()
-    for i in range(212):
+    for i in range(len(fileList)//4-1):
+        print(fname , i)
+
         # Get a different threshold knowing the kind of file
         if fname =='AoP_':
             regT = 500//64
             pixT= regT
         else:
-            regT = 570
+            regT = 650
             pixT= regT
 
-        print(i)
         plt.clf() # Clear the figure
+        dt = time.time()
         # Open images
-        image0 = io.imread('move1-'+folder+'/'+fname+str(i)+'.tiff')
-        image1 = io.imread('move1-'+folder+'/'+fname+str(i+1)+'.tiff')
+        image0 = io.imread('move'+str(nfolder)+'-'+folder+'/'+fname+str(i)+'.tiff')
+        image0 = exposure.rescale_intensity(util.img_as_float(image0)) # Contrast enhancement
+
+
         # "Tracking treatment
-        hog= filters.scharr(image0) # Edge detector
-        hog2 = filters.sobel(hog) # Edge detector of the edge detctor
-        hog = (hog2)/np.max(hog2) # Normalization
-        hog = morphology.dilation(hog, morphology.square(3)) # Dilation of the edge-edge detector
-        hog = filters.gaussian(hog, sigma = 0.5) # Filtering
-        hog = color.rgb2gray(hog) # Convert to grayscale (optionnal)
+        hog=filters.scharr(image0)
+        hog = filters.sobel(hog) # Edge detector of the edge detctor
+        hog = morphology.dilation(hog, square) # Dilation of the edge-edge detector
+        hog = filters.gaussian(hog, sigma = 1.5) # Filtering
+        #hog = exposure.rescale_intensity(hog)
+        #hog = color.rgb2gray(hog) # Convert to grayscale (optionnal)
         markers2 = markers.copy()
-        markers2 = classifier.gradientDescent(hog, 2, markers2) # Gradient Descent -> Give new markers
-        #markers2 = classifier.resizeMarkers(markers2, 1/ratio)
+        #labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =2000) # Region growing based on mearkers
+        markers2, isIter = classifier.gradientDescent(hog, nbIter, markers2, useRandom = False) # Gradient Descent -> Give new markers
+        #labels=classifier.labelExtractor(segmentation.slic(image0, n_segments=200, compactness=0.1, sigma=1, multichannel = False), markers)   
+        # Getting the segmented region
+        labels=classifier.labelExtractor(segmentation.felzenszwalb(image0, scale=1.2, sigma=0.8, min_size=40, multichannel=False), markers)
+        timeList.append(time.time() - dt)
+        markers = classifier.resizeMarkers(markers, 1)        
         markers2=np.asarray(markers2) # Python list to Numpy array conversion
         markers=np.asarray(markers)
-        a, b = markers2.T
-        labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True) # Region growing based on mearkers
-        
-        #model_robust, inliers, outliers, src, dst = fpm.featurePointMatching(image0, image1, decimation = 1)
-        #markers = fpm.getNewMarkers(model_robust, markers)
-        #plt.imshow(segmentation.mark_boundaries(color.label2rgb(labels, hog), labels))
-        
         #Plotting
-        plt.imshow(hog, cmap='gray')   
+        plt.imshow(transform.rescale(color.label2rgb(labels, image0), 1), cmap = 'gray')
         plt.axis('off')
         x,y = markers.T
         a, b = markers2.T
         plt.plot(y,x, '+r', ms=6)
         plt.plot(b,a, '+g', ms=6)
+        plt.savefig('misc'+str(nfolder)+'/'+fname+str(i)+'.tiff')
         markers= markers2
-        plt.savefig('misc/'+fname+str(i)+'.tiff')
-        
 
-    
-    
+plt.clf()
+hist, bins, _ = plt.hist(timeList, bins = 200)
+plt.plot(bins[:-1], hist)
+plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2)
+plt.axvline(np.median(timeList), color='r', linestyle='dashed', linewidth=2)
+
+print(np.mean(timeList))

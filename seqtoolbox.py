@@ -21,7 +21,7 @@ from skimage import transform
 from skimage import segmentation
 import regiongrowing as rg
 
-def gradientDescent(gradient,nIter, markers):
+def gradientDescent(gradient,nIter, markers,useRandom=False):
     """
     Naive 8 directions gradient descent
     Inputs :
@@ -31,34 +31,36 @@ def gradientDescent(gradient,nIter, markers):
     Output :
         markers : a seed list of coordinates according to the descent
     """
-    w, h = gradient.shape
-    nMarkers = len(markers) 
-    for i in range(nIter):
-        k=0
-        for k in range(nMarkers):
-            x,y = int(markers[k][0]), int(markers[k][1])
-            grad = gradient[x,y]
-            neighboursList=[(x,max(0,y-1)), (max(x-1,0),y), (x,min(h-1,y+1)), (min(x+1,w-1),y), (max(x-1,0),max(0,y-1)), (max(x-1,0),min(h-1,y+1)), (min(x+1,w-1),min(h-1,y+1)), (min(x+1,w-1),max(0,y-1))] # L, T, R, B, TL, TR, BR, BL
-            distance = []
-            for a,b in neighboursList: # get all the gradient deltas
-                distance.append(gradient[a,b]-grad)
-            l = np.argmin(distance) # Get the index of the minimum delta
-            d = np.min(distance) # Get the value of the minimum delta
-            if d<=0: # If a point is lower, update the markers
-                a,b = neighboursList[l]
-                markers[k] = [a,b]
-            else:
-                k+=1
-        if k==nMarkers: # If all neighbours are not interesting
-                break
-    return markers
+    nbIter = 0
+
+    if useRandom:
+        # Deprecated
+        raise NameError('HiThere')
+    else:
+        w, h = gradient.shape
+        nMarkers = len(markers) 
+        for i in range(nIter):
+            nbIter+=1
+            count=0
+            for k in range(nMarkers):
+                x,y = int(markers[k][0]), int(markers[k][1])
+                grad = gradient[x,y]
+                neighboursList=[(x,max(0,y-1)), (max(x-1,0),y), (x,min(h-1,y+1)), (min(x+1,w-1),y), (max(x-1,0),max(0,y-1)), (max(x-1,0),min(h-1,y+1)), (min(x+1,w-1),min(h-1,y+1)), (min(x+1,w-1),max(0,y-1))] # L, T, R, B, TL, TR, BR, BL
+                distance = [gradient[a,b]-grad for a,b in neighboursList]
+                l = np.argmin(distance) # Get the index of the minimum delta
+                d = np.min(distance) # Get the value of the minimum delta
+                if d<=0: # If a point is lower, update the markers
+                    a,b = neighboursList[l]
+                    markers[k] = [a,b]
+                else:
+                    count+=1
+            if count==nMarkers: # If all neighbours are not interesting
+                    break
+        return markers, nbIter
 
 def resizeMarkers(markers, ratio):
-    newMarkers = []
-    for k in range(len(markers)):
-        i, j = markers[k]
-        newMarkers.append([int(i*ratio), int(j*ratio)])
-    return newMarkers
+    newMarkers = [[int(i*ratio), int(j*ratio)] for i,j in markers]
+    return np.asarray(newMarkers)
 
 def getEstimatedMarkers(markersOrigin, image, nIter=15):
     fd, hogImage = hog(image, orientations=8, pixels_per_cell=(4, 4),
@@ -72,3 +74,13 @@ def getEstimatedMarkers(markersOrigin, image, nIter=15):
     markers2 = gradientDescent(fd, nIter, markers2)
     markers2 = resizeMarkers(markers2, 1/ratio)
     return markers2, hogImage
+
+def labelExtractor(labels, markers):
+    l=[labels[int(x),int(y)] for x,y in markers]
+    w,h = labels.shape
+    for i in range(w):
+        for j in range(h):
+            if not labels[i,j] in l:
+                labels[i,j] = 0
+    return labels
+                
