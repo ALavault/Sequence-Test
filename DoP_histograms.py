@@ -38,9 +38,7 @@ plt.close('all') # Close all remaining figures
 
 fileList = os.listdir(os.getcwd()+'/move1-polar/')
 i=1
-# Try to get a template from histograms
-
-            
+# Try to get a pattern from histograms
 
 for filename in fileList:
     try :

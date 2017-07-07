@@ -17,16 +17,16 @@ from skimage import exposure
 
 def gradientDescent(gradient,markers, nIter=25 ,useRandom=False):
     """
-    Naive 8 directions gradient descent
+    Naive 8 directions gradient descent.
     Inputs :
         - gradient : matrix representing the gradient to descend
         - nIter : Maximum number of iterations to descend
         - markers : List of coordinates representing the original seeds
     Output :
-        markers : a seed list of coordinates according to the descent
+        markers2 : a seed list of coordinates according to the descent (not in place)
     """
+    markers2 = np.copy(markers)
     nbIter = 0
-
     if useRandom:
         # Deprecated
         raise NameError('HiThere')
@@ -37,7 +37,7 @@ def gradientDescent(gradient,markers, nIter=25 ,useRandom=False):
             nbIter+=1
             count=0
             for k in range(nMarkers):
-                x,y = int(markers[k][0]), int(markers[k][1])
+                x,y = int(markers2[k][0]), int(markers2[k][1])
                 grad = gradient[x,y]
                 neighboursList=[(x,max(0,y-1)), (max(x-1,0),y), (x,min(h-1,y+1)), (min(x+1,w-1),y), (max(x-1,0),max(0,y-1)), (max(x-1,0),min(h-1,y+1)), (min(x+1,w-1),min(h-1,y+1)), (min(x+1,w-1),max(0,y-1))] # L, T, R, B, TL, TR, BR, BL
                 distance = [gradient[a,b]-grad for a,b in neighboursList]
@@ -45,12 +45,12 @@ def gradientDescent(gradient,markers, nIter=25 ,useRandom=False):
                 d = np.min(distance) # Get the value of the minimum delta
                 if d<=0: # If a point is lower, update the markers
                     a,b = neighboursList[l]
-                    markers[k] = [a,b]
+                    markers2[k] = [a,b]
                 else:
                     count+=1
             if count==nMarkers: # If all neighbours are not interesting
                     break
-        return markers, nbIter
+        return markers2, nbIter
 
 def resizeMarkers(markers, ratio):
     """
@@ -101,5 +101,5 @@ def gradientTracking(image, markers, nbIter =25, selem = morphology.square(3), s
     hog = filters.gaussian(hog, sigma = sigma) # Filtering
     hog = exposure.rescale_intensity(hog)
     markers2 = markers.copy()
-    markers2, _ = gradientDescent(hog,markers,nbIter,useRandom=False)
+    markers2, _ = gradientDescent(hog,markers2,nIter = nbIter,useRandom=False)
     return markers2
