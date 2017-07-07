@@ -57,8 +57,16 @@ markers.astype(int) # Integer coordinates
 plt.close('all')
 fnames=['AoP_','DoP_' , 'I0_', 'I45_', 'I90_', 'I135_','S0_', 'S1_', 'S2_']
 markersOrigin = markers.copy()
+markerList=[markers]
 timeList=[]
 square = morphology.square(3)
+# Markers generation using AoP
+for i in range(len(fileList)//4-1):
+    image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
+    markers2 = classifier.gradientTracking(image0, markerList[i], nbIter= nbIter)
+    markerList.append(markers2)
+
+# Main treatment
 for fname in fnames:
     if fname[0]=='A' or fname[0]=='D':
         folder = 'polar'
@@ -70,8 +78,9 @@ for fname in fnames:
         ()
     markers=markersOrigin.copy()
     for i in range(len(fileList)//4-1):
+        markers = markerList[i]
+        markers2 = markerList[i+1]
         print(fname , i)
-
         # Get a different threshold knowing the kind of file (if region growing algorithm is usedS)
         if fname[0]=='A':
             regT = 6
@@ -79,32 +88,22 @@ for fname in fnames:
         else:
             regT = 6*2**8
             pixT= regT
-
         plt.clf() # Clear the figure
         dt = time.time() # Launch the time measurement
         # Open image
         image0 = io.imread('move'+str(nfolder)+'-'+folder+'/'+fname+str(i)+'.tiff')
         image0 = exposure.rescale_intensity(image0) # Contrast enhancement
-        hog=filters.scharr(image0)
-        hog = filters.sobel(hog) # Edge detector of the edge detctor
-        hog = morphology.dilation(hog, square) # Dilation of the edge-edge detector
-        hog = filters.gaussian(hog, sigma = 1.5) # Filtering
-        hog = exposure.rescale_intensity(hog)
-        markers2 = markers.copy()
-        markers2, _ = classifier.gradientDescent(hog,markers2,nIter = nbIter,useRandom=False)
         # Getting the segmented region
-        #labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on mearkers
-        #labels=classifier.labelExtractor(segmentation.felzenszwalb(image0, scale=1.8, sigma=10, min_size=55, multichannel=False), markers)
-        #classifier.getConvexLabels(labels) # Convex hull of the labels
+        labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on mearkers
+        classifier.getConvexLabels(labels) # Convex hull of the labels
         # Narkers Tracking
-        #markers2 = classifier.gradientTracking(util.img_as_float(image0), markers, nbIter= nbIter)
+        #markers2 = classifier.gradientTracking(image0, markers, nbIter= nbIter)
         markers2=np.asarray(markers2)
-        timeList.append(time.time() - dt) # Stop the time measurement
+        timeList.append(time.time() - dt) # Stop the time measurement and append the result for further evalutation
         markers2.astype('int16')# Python list to Numpy array conversion
         markers=np.asarray(markers)
         #Plotting
-        plt.imshow(image0, cmap = 'gray')
-        #plt.imshow(transform.rescale(color.label2rgb(labels, image0), 1), cmap = 'gray')
+        plt.imshow(transform.rescale(color.label2rgb(labels, image0), 1), cmap = 'gray')
         plt.axis('off')
         x,y = markers.T
         a, b = markers2.T
