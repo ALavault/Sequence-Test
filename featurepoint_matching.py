@@ -5,7 +5,7 @@ Created on Tue Jun 20 10:19:31 2017
 
 @author: viper
 
-Description : 
+Description : Implementation of an estimation of homogeneous matrix between 2 images
 
 """
 
