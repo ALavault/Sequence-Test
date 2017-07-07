@@ -33,7 +33,7 @@ import seqtoolbox as classifier
 import time
 plt.close('all')
 
-nfolder = 2
+nfolder = 3
 nbIter= 25
 
 fileList = os.listdir(os.getcwd()+'/move'+str(nfolder)+'-angle')
@@ -42,7 +42,6 @@ fileList.sort()
 toTreat = []
 # Init
 image0 = io.imread('move'+str(nfolder)+'-angle/'+fileList[0])
-#image0 = image0[:224,:]
 plt.imshow(image0, cmap='gray')
 
 markers = plt.ginput(n=2) # Get the two original seeds
@@ -55,11 +54,13 @@ for i in range(len(markers)): # Convert the seeds in order to be used with Numpy
     markers[i]=[y_,x_]
 markers.astype(int) # Integer coordinates
 plt.close('all')
+# A few constants
 fnames=['AoP_','DoP_' , 'I0_', 'I45_', 'I90_', 'I135_','S0_', 'S1_', 'S2_']
 markersOrigin = markers.copy()
 markerList=[markers]
 timeList=[]
 square = morphology.square(3)
+
 # Markers generation using AoP
 for i in range(len(fileList)//4-1):
     image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
@@ -81,7 +82,7 @@ for fname in fnames:
         markers = markerList[i]
         markers2 = markerList[i+1]
         print(fname , i)
-        # Get a different threshold knowing the kind of file (if region growing algorithm is usedS)
+        ### Get a different threshold knowing the kind of file (if region growing algorithm is used) ###
         if fname[0]=='A':
             regT = 6
             pixT= regT
@@ -90,19 +91,16 @@ for fname in fnames:
             pixT= regT
         plt.clf() # Clear the figure
         dt = time.time() # Launch the time measurement
-        # Open image
+        ### Open image ###
         image0 = io.imread('move'+str(nfolder)+'-'+folder+'/'+fname+str(i)+'.tiff')
-        image0 = exposure.rescale_intensity(image0) # Contrast enhancement
-        # Getting the segmented region
-        labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on mearkers
-        classifier.getConvexLabels(labels) # Convex hull of the labels
-        # Narkers Tracking
-        #markers2 = classifier.gradientTracking(image0, markers, nbIter= nbIter)
-        markers2=np.asarray(markers2)
+        image0 = exposure.rescale_intensity(image0) # Contrast enhancement (use the full dynamic according to the type of the image)
+        
+        ### Getting the segmented region ###
+        labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on markers
+        classifier.getConvexLabels(labels) # Convex hull of the labels, prettier
         timeList.append(time.time() - dt) # Stop the time measurement and append the result for further evalutation
-        markers2.astype('int16')# Python list to Numpy array conversion
-        markers=np.asarray(markers)
-        #Plotting
+        
+        ### Plotting ###
         plt.imshow(transform.rescale(color.label2rgb(labels, image0), 1), cmap = 'gray')
         plt.axis('off')
         x,y = markers.T
@@ -112,10 +110,11 @@ for fname in fnames:
         plt.savefig('misc'+str(nfolder)+'/'+fname+str(i)+'.tiff')
         markers= markers2
 
+### Histogram of execution times
+
 plt.clf()
 hist, bins, _ = plt.hist(timeList, bins = 200)
-plt.plot(bins[:-1], hist)
-plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2)
-plt.axvline(np.median(timeList), color='r', linestyle='dashed', linewidth=2)
-
+mean, = plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2, label = 'Mean')
+median, =plt.axvline(np.median(timeList), color='r', linestyle='dashed', linewidth=2, label = 'Median')
+plt.legend([mean, median], ['Mean', 'Median'])
 print(np.mean(timeList))

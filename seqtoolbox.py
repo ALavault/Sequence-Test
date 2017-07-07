@@ -26,7 +26,6 @@ def gradientDescent(gradient,markers, nIter=25):
         markers2 : a seed list of coordinates according to the descent (not in place)
     """
     markers2 = markers.copy()
-    print(markers, markers2)
     w, h = gradient.shape
     nMarkers = len(markers) 
     for i in range(nIter):
