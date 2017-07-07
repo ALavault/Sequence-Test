@@ -7,21 +7,15 @@ Created on Thu Jun 29 09:33:17 2017
 
 Description : Toolbox for sequences of images
 """
-from __future__ import print_function
 import numpy as np
-import matplotlib.pyplot as plt
-from skimage.transform import rotate
-from skimage.feature import local_binary_pattern, hog
-from skimage import data
-from skimage.color import label2rgb
-from skimage import io
-from skimage import  color, exposure
-from skimage import util
-from skimage import transform
-from skimage import segmentation
-import regiongrowing as rg
+from skimage import measure
+from skimage import filters
+from skimage import morphology
+from skimage import exposure
 
-def gradientDescent(gradient,nIter, markers,useRandom=False):
+
+
+def gradientDescent(gradient,markers, nIter=25 ,useRandom=False):
     """
     Naive 8 directions gradient descent
     Inputs :
@@ -59,23 +53,27 @@ def gradientDescent(gradient,nIter, markers,useRandom=False):
         return markers, nbIter
 
 def resizeMarkers(markers, ratio):
+    """
+    Give resized markers. Should be used with resized images.
+    Inputs :
+        - markers : List of coordinates representing the original seeds
+        - ratio : size ratio to give to the markers
+    Output :
+        newMarkers : resized markers as Numpy array
+    """
+
     newMarkers = [[int(i*ratio), int(j*ratio)] for i,j in markers]
     return np.asarray(newMarkers)
 
-def getEstimatedMarkers(markersOrigin, image, nIter=15):
-    fd, hogImage = hog(image, orientations=8, pixels_per_cell=(4, 4),
-                    cells_per_block=(1, 1), visualise=True)
-    ratio = len(fd)/float(image.size)
-    w,h = image.shape
-    w, h = w*ratio, h*ratio
-    shape = (int(w), int(h))
-    fd = np.resize(fd, shape)
-    markers2 = resizeMarkers(markersOrigin, ratio)
-    markers2 = gradientDescent(fd, nIter, markers2)
-    markers2 = resizeMarkers(markers2, 1/ratio)
-    return markers2, hogImage
-
 def labelExtractor(labels, markers):
+    """
+    Extract labeled area where the markers are.
+    Inputs :
+        - labels : an image/2D array containing labeled regions
+        - markers : seeds to test
+    Output :
+        - labels : Image/2D array containing only the labels where the markers are.
+    """
     l=[labels[int(x),int(y)] for x,y in markers]
     w,h = labels.shape
     for i in range(w):
@@ -84,3 +82,24 @@ def labelExtractor(labels, markers):
                 labels[i,j] = 0
     return labels
                 
+def getConvexLabels(labels):
+    """
+    Give the convex hull of given labels. 0 means background and so is not processed.
+    """
+    props = measure.regionprops(labels)
+    bbox = [ props[k].bbox for k in range(len(props))]
+    cv = [ props[k].convex_image for k in range(len(props))]
+    for k in range(len(props)):
+        min_row, min_col, max_row, max_col = bbox[k]
+        labels[min_row:max_row, min_col:max_col] = (k+1)*cv[k]
+    return labels
+
+def gradientTracking(image, markers, nbIter =25, selem = morphology.square(3), sigma = 1.5):
+    hog=filters.scharr(image)
+    hog = filters.sobel(hog) # Edge detector of the edge detctor
+    hog = morphology.dilation(hog, selem) # Dilation of the edge-edge detector
+    hog = filters.gaussian(hog, sigma = sigma) # Filtering
+    hog = exposure.rescale_intensity(hog)
+    markers2 = markers.copy()
+    markers2, _ = gradientDescent(hog,markers,nbIter,useRandom=False)
+    return markers2

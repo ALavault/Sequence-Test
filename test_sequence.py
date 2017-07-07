@@ -22,6 +22,8 @@ import matplotlib
 from skimage.feature import ORB, match_descriptors
 matplotlib.use('pgf')
 import numpy as np
+from skimage import measure
+
 from skimage import color
 from skimage import feature
 from skimage import filters
@@ -34,7 +36,7 @@ import seqtoolbox as classifier
 import time
 plt.close('all')
 
-nfolder = 1
+nfolder = 2
 nbIter= 25//4
 
 fileList = os.listdir(os.getcwd()+'/move'+str(nfolder)+'-angle')
@@ -73,37 +75,29 @@ for fname in fnames:
     for i in range(len(fileList)//4-1):
         print(fname , i)
 
-        # Get a different threshold knowing the kind of file
-        if fname =='AoP_':
-            regT = 500//64
+        # Get a different threshold knowing the kind of file (if region growing algorithm is usedS)
+        if fname[0]=='A':
+            regT = 6
             pixT= regT
         else:
-            regT = 650
+            regT = 6*2**8
             pixT= regT
 
         plt.clf() # Clear the figure
-        dt = time.time()
-        # Open images
+        dt = time.time() # Launch the time measurement
+        # Open image
         image0 = io.imread('move'+str(nfolder)+'-'+folder+'/'+fname+str(i)+'.tiff')
-        image0 = exposure.rescale_intensity(util.img_as_float(image0)) # Contrast enhancement
-
-
-        # "Tracking treatment
-        hog=filters.scharr(image0)
-        hog = filters.sobel(hog) # Edge detector of the edge detctor
-        hog = morphology.dilation(hog, square) # Dilation of the edge-edge detector
-        hog = filters.gaussian(hog, sigma = 1.5) # Filtering
-        #hog = exposure.rescale_intensity(hog)
-        #hog = color.rgb2gray(hog) # Convert to grayscale (optionnal)
-        markers2 = markers.copy()
-        #labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =2000) # Region growing based on mearkers
-        markers2, isIter = classifier.gradientDescent(hog, nbIter, markers2, useRandom = False) # Gradient Descent -> Give new markers
-        #labels=classifier.labelExtractor(segmentation.slic(image0, n_segments=200, compactness=0.1, sigma=1, multichannel = False), markers)   
+        image0 = exposure.rescale_intensity(image0) # Contrast enhancement
         # Getting the segmented region
-        labels=classifier.labelExtractor(segmentation.felzenszwalb(image0, scale=1.2, sigma=0.8, min_size=40, multichannel=False), markers)
-        timeList.append(time.time() - dt)
-        markers = classifier.resizeMarkers(markers, 1)        
-        markers2=np.asarray(markers2) # Python list to Numpy array conversion
+        labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on mearkers
+        #labels=classifier.labelExtractor(segmentation.felzenszwalb(image0, scale=1.8, sigma=10, min_size=55, multichannel=False), markers)
+        classifier.getConvexLabels(labels) # Convex hull of the labels
+        # Narkers Tracking
+        markers2 = classifier.gradientTracking(image0, markers, nbIter= nbIter)
+        markers2=np.asarray(markers2)
+        timeList.append(time.time() - dt) # Stop the time measurement
+        markers2=np.asarray(markers2)
+        markers2.astype('int16')# Python list to Numpy array conversion
         markers=np.asarray(markers)
         #Plotting
         plt.imshow(transform.rescale(color.label2rgb(labels, image0), 1), cmap = 'gray')
