@@ -33,13 +33,12 @@ import seqtoolbox as classifier
 import time
 plt.close('all')
 
-nfolder = 3
+nfolder = 1
 nbIter= 25
 
 fileList = os.listdir(os.getcwd()+'/move'+str(nfolder)+'-angle')
-print(len(fileList),len(fileList)//4)
 fileList.sort()
-toTreat = []
+
 # Init
 image0 = io.imread('move'+str(nfolder)+'-angle/'+fileList[0])
 plt.imshow(image0, cmap='gray')
@@ -62,10 +61,12 @@ timeList=[]
 square = morphology.square(3)
 
 # Markers generation using AoP
+print('Marker generation....')
 for i in range(len(fileList)//4-1):
     image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
     markers2 = classifier.gradientTracking(image0, markerList[i], nbIter= nbIter)
     markerList.append(markers2)
+print('Done')
 
 # Main treatment
 for fname in fnames:
@@ -114,7 +115,8 @@ for fname in fnames:
 
 plt.clf()
 hist, bins, _ = plt.hist(timeList, bins = 200)
-mean, = plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2, label = 'Mean')
-median, =plt.axvline(np.median(timeList), color='r', linestyle='dashed', linewidth=2, label = 'Median')
+mean = plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2, label = 'Mean')
+median =plt.axvline(np.median(timeList), color='r', linestyle='dashed', linewidth=2, label = 'Median')
+plt.xlabel('Time (s)')
 plt.legend([mean, median], ['Mean', 'Median'])
 print(np.mean(timeList))
