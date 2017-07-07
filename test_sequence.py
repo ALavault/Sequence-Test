@@ -33,7 +33,7 @@ import seqtoolbox as classifier
 import time
 plt.close('all')
 
-nfolder = 1
+nfolder = 2
 nbIter= 25
 
 fileList = os.listdir(os.getcwd()+'/move'+str(nfolder)+'-angle')
@@ -60,7 +60,7 @@ markerList=[markers]
 timeList=[]
 square = morphology.square(3)
 
-# Markers generation using AoP
+# Markers generation using AoP -> the most robust of all images for this
 print('Marker generation....')
 for i in range(len(fileList)//4-1):
     image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
@@ -114,9 +114,15 @@ for fname in fnames:
 ### Histogram of execution times
 
 plt.clf()
+
 hist, bins, _ = plt.hist(timeList, bins = 200)
 mean = plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2, label = 'Mean')
 median =plt.axvline(np.median(timeList), color='r', linestyle='dashed', linewidth=2, label = 'Median')
+plt.axvline(1/30., color='b', linewidth=1)
+plt.axvline(0.1, color='b', linewidth=1)
+plt.text(1/30., np.max(hist), '30 fps')
+plt.text(0.10, np.max(hist), '10 fps')
+
 plt.xlabel('Time (s)')
 plt.legend([mean, median], ['Mean', 'Median'])
 print(np.mean(timeList))
