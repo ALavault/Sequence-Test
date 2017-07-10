@@ -12,25 +12,20 @@ from matplotlib import pyplot as plt
 from skimage import io
 from skimage import exposure
 from skimage import transform
-
 from skimage.feature import (corner_harris, corner_subpix, corner_peaks,plot_matches)
 from skimage import morphology
 import matplotlib
 from skimage.feature import ORB, match_descriptors
 matplotlib.use('pgf')
-import numpy as np
 from skimage import measure
-
 from skimage import color
 from skimage import feature
 from skimage import filters
 from skimage import segmentation
-from skimage.measure import ransac
 from skimage import util
-import time as t
+import time
 import regiongrowing as rg
 import seqtoolbox as classifier
-import time
 plt.close('all')
 
 nfolder = 2
@@ -59,9 +54,9 @@ markersOrigin = markers.copy()
 markerList=[markers]
 timeList=[]
 square = morphology.square(3)
-
 # Markers generation using AoP -> the most robust of all images for this
 print('Marker generation....')
+
 for i in range(len(fileList)//4-1):
     image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
     markers2 = classifier.gradientTracking(image0, markerList[i], nbIter= nbIter)
