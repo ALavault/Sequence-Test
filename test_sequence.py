@@ -28,6 +28,8 @@ import regiongrowing as rg
 import seqtoolbox as classifier
 plt.close('all')
 
+
+
 nfolder = 2
 nbIter= 25
 
@@ -77,27 +79,25 @@ for fname in fnames:
     for i in range(len(fileList)//4-1):
         markers = markerList[i]
         markers2 = markerList[i+1]
-        print(fname , i)
+        #print(fname , i)
         ### Get a different threshold knowing the kind of file (if region growing algorithm is used) ###
         if fname[0]=='A':
             regT = 6
             pixT= regT
         else:
-            regT = 6*2**8
+            regT = 10*2**8
             pixT= regT
         plt.clf() # Clear the figure
         dt = time.time() # Launch the time measurement
         ### Open image ###
         image0 = io.imread('move'+str(nfolder)+'-'+folder+'/'+fname+str(i)+'.tiff')
-        image0 = exposure.rescale_intensity(image0) # Contrast enhancement (use the full dynamic according to the type of the image)
-        
+        #image0 = exposure.rescale_intensity(image0) # Contrast enhancement (use the full dynamic according to the type of the image)
         ### Getting the segmented region ###
         labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on markers
-        classifier.getConvexLabels(labels) # Convex hull of the labels, prettier
+        classifier.getConvexLabels(labels) # Convex hull of the labels, fuller regions
         timeList.append(time.time() - dt) # Stop the time measurement and append the result for further evalutation
-        
         ### Plotting ###
-        plt.imshow(transform.rescale(color.label2rgb(labels, image0), 1), cmap = 'gray')
+        plt.imshow(color.label2rgb(labels, image0), cmap = 'gray')
         plt.axis('off')
         x,y = markers.T
         a, b = markers2.T
@@ -105,11 +105,10 @@ for fname in fnames:
         plt.plot(b,a, '+g', ms=6)
         plt.savefig('misc'+str(nfolder)+'/'+fname+str(i)+'.tiff')
         markers= markers2
-
+    
+    
 ### Histogram of execution times
-
 plt.clf()
-
 hist, bins, _ = plt.hist(timeList, bins = 200)
 mean = plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2, label = 'Mean')
 median =plt.axvline(np.median(timeList), color='r', linestyle='dashed', linewidth=2, label = 'Median')

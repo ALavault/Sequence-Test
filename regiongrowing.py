@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jun 20 10:19:31 2017
-
 @author: viper
-
 Description : Test of a region growing algorithm
 """
 
@@ -36,6 +34,7 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
         regionGrowing implements a region-growing like algorithm to segment an image
     
     """
+    # TODO : Parallelize the process 
     seeds=seeds.astype(int)
     toVisit=seeds.flatten()
     nIter=0
@@ -49,16 +48,14 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
     while toVisit != []:
         if hasMaxPoints and nIter>maxPoints:
             break
-        point=(toVisit[0], toVisit[1])
+        #point=(toVisit[0], toVisit[1])
         x,y = int(toVisit[0]), int(toVisit[1])
-        nIter+=1
         seed= labels[x,y]
+        nIter+=1
         if nIter<=nSeeds:
             # Initialize the original seeds on matrix labels
             labels[x,y]=nIter
-            toVisit = np.delete(toVisit,0)
-            toVisit = np.delete(toVisit,0)
-            toVisit = np.append(toVisit,(x,y))
+            toVisit = np.append(np.delete(toVisit,[0,1]),(x,y))
         else:
             # Beginning of the treatment
             neighboursList=[(x,max(0,y-1)), (max(x-1,0),y), (x,min(nbCols-1,y+1)), (min(x+1,nbRows-1),y), (max(x-1,0),max(0,y-1)), (max(x-1,0),min(nbCols-1,y+1)), (min(x+1,nbRows-1),min(nbCols-1,y+1)), (min(x+1,nbRows-1),max(0,y-1))] # L, T, R, B, TL, TR, BR, BL
@@ -66,47 +63,22 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
             # Create a the list of distances in regards of neighboursList
             for candidate in neighboursList:
                 a,b = candidate
-                distances = np.append(distances, np.abs(int(image[x,y])-int(image[a,b])))
-            # If the distances are not set to be sorted
-            if not sortDistances:
-                toVisitNext=[]
-                # Get all possible new points to visit
-                for i in range(len(neighboursList)):
-                    candidate = neighboursList[i]
-                    # Test if the point currently processed is acceptable knowing the thresholds and forner labels
-                    if isAcceptable(point, candidate, labels, image, seeds,pixelThreshold, regionThreshold): # If it is acceptable,
-                        # add it to the list containing the next points to be visited
-                        toVisitNext=np.append(toVisitNext, candidate)
-                        a,b = candidate
-                        labels[a,b]= seed
-                    # else, don't do anything
-            else: # sortDistance = True
-                toVisitNext=[]
-                dataFrame=[]
-                # Get all possible new points to visit
-                for i in range(len(neighboursList)):
-                    candidate = neighboursList[i]
-                    # Test if the point currently processed is acceptable knowing the thresholds and forner labels
-                    if isAcceptable(point, candidate, labels, image, seeds,pixelThreshold, regionThreshold):
-                        # add it to the acceptable candidates list dataFrame
-                        dataFrame.append([distances[i],candidate])
-                        a,b = candidate
-                        labels[a,b]= seed
-                    # else, don't do anything
-                dataFrame.sort() # Sort the candidates list according to distance
-                for _,candidate in dataFrame:
+                distances = np.append(distances, abs(int(image[x,y])-int(image[a,b])))
+            toVisitNext=[]
+            # Get all possible new points to visit
+            for candidate in neighboursList:
+                # Test if the point currently processed is acceptable knowing the thresholds and forner labels
+                if isAcceptable((toVisit[0], toVisit[1]), candidate, labels, image, seeds, pixelThreshold, regionThreshold): # If it is acceptable,
                     # add it to the list containing the next points to be visited
                     toVisitNext=np.append(toVisitNext, candidate)
+                    labels[candidate[0], candidate[1]]= seed
             # Treatment of pixels to be visited        
             if toVisitNext is []: # no acceptable neighbour to visit next
                 # then remove the point being treated (the "seed")
-                toVisit = np.delete(toVisit,0)
-                toVisit = np.delete(toVisit,0) 
+                toVisit = np.delete(toVisit,[0,1])
             else:
                 # Add the candidates to be visited in the order chosen             
-                toVisit = np.delete(toVisit,0)
-                toVisit = np.delete(toVisit,0)
-                toVisit = np.append(toVisit,toVisitNext)
+                toVisit = np.append(np.delete(toVisit,[0,1]),toVisitNext)
     # Function to get every non labeled pixel to one of the labeled zones
     if noOrphans:
         # To avoid point with label = 0 pop : array[:-1] 
@@ -133,7 +105,6 @@ def isAcceptable(point, candidate,labels, image, seeds,pixelThreshold, regionThr
     Output : boolean
     Description : 
         isAcceptable returns if a candidate from a point is acceptable as a candidate
-    
     """
     x,y = point
     a,b = candidate
@@ -142,10 +113,7 @@ def isAcceptable(point, candidate,labels, image, seeds,pixelThreshold, regionThr
     originalSeed = seeds[seed-1] # seed of the labeled point
     i,j = originalSeed
     i,j = int(i), int(j)
-    if (np.abs(int(image[x,y])-int(image[a,b]))<pixelThreshold) and (np.abs(int(image[i,j])-int(image[a,b]))<regionThreshold) and labels[a,b] ==0:
-        return True
-    else:
-        return False
+    return (labels[a,b] ==0 and (abs(int(image[x,y])-int(image[a,b]))<pixelThreshold) and (abs(int(image[i,j])-int(image[a,b]))<regionThreshold))
 
 def getLabelled(neighboursLabels):
     """
@@ -191,20 +159,15 @@ def labelExtractor(image):
     return matrixList
 
 """
-
 Tests......
-
 plt.close('all') # Close all remaining figures
-
 filename = 'S2_0.tiff'
 im = io.imread(filename) # Open the image
 im = filters.median(im) # filtering : for smoother boundaries
 im=img_as_uint(im)
 plt.imshow(im, cmap='gray')
-
 markers = plt.ginput(n=3)
 markers=np.asarray(markers) # Python list to Numpy array conversion
-
 x, y = markers.T
 plt.imshow(im, cmap='gray')
     
@@ -217,21 +180,14 @@ pixT = 2000
 regT = 4000
 labels = regionGrowing(im, markers, pixT, regT, noOrphans=False)
 labels2 = regionGrowing(im, markers, pixT, regT,noOrphans=True)
-
 f, axarr = plt.subplots(1, 2)
-
-
 axarr[0].imshow(segmentation.mark_boundaries(color.label2rgb(labels, im), labels))
 axarr[0].plot(y, x, 'or', ms=3)
 axarr[0].set_title('Without orphan adoption')
 axarr[0].axis('off')
-
 axarr[1].imshow(segmentation.mark_boundaries(color.label2rgb(labels2, im), labels2))
 axarr[1].plot(y, x, 'or', ms=3)
 axarr[1].set_title('With orphan adoption')
 axarr[1].axis('off')
-
-
 plt.savefig('Processed/Region Growing/'+filename, dpi = 96*len(axarr))
-
 """
