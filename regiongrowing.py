@@ -32,7 +32,6 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None,h
         labels : a matrix of segmented regions
     Description : 
         regionGrowing implements a region-growing like algorithm to segment an image
-    
     """
     # TODO : Parallelize the process 
     seeds=seeds.astype(int)
@@ -136,37 +135,3 @@ def labelExtractor(image):
             mat = matrixList[label-1]
             mat[i,j]=label
     return matrixList
-
-"""
-Tests......
-plt.close('all') # Close all remaining figures
-filename = 'S2_0.tiff'
-im = io.imread(filename) # Open the image
-im = filters.median(im) # filtering : for smoother boundaries
-im=img_as_uint(im)
-plt.imshow(im, cmap='gray')
-markers = plt.ginput(n=3)
-markers=np.asarray(markers) # Python list to Numpy array conversion
-x, y = markers.T
-plt.imshow(im, cmap='gray')
-    
-for i in range(len(markers)):
-    x_,y_ = markers[i]
-    markers[i]=[y_,x_]
-markers.astype(int)
-plt.close('all')
-pixT = 2000
-regT = 4000
-labels = regionGrowing(im, markers, pixT, regT, noOrphans=False)
-labels2 = regionGrowing(im, markers, pixT, regT,noOrphans=True)
-f, axarr = plt.subplots(1, 2)
-axarr[0].imshow(segmentation.mark_boundaries(color.label2rgb(labels, im), labels))
-axarr[0].plot(y, x, 'or', ms=3)
-axarr[0].set_title('Without orphan adoption')
-axarr[0].axis('off')
-axarr[1].imshow(segmentation.mark_boundaries(color.label2rgb(labels2, im), labels2))
-axarr[1].plot(y, x, 'or', ms=3)
-axarr[1].set_title('With orphan adoption')
-axarr[1].axis('off')
-plt.savefig('Processed/Region Growing/'+filename, dpi = 96*len(axarr))
-"""

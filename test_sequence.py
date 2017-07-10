@@ -57,25 +57,23 @@ markerList=[markers]
 timeList=[]
 square = morphology.square(3)
 # Markers generation using AoP -> the most robust of all images for this
-print('Marker generation....')
+print('Markers generation....')
 
 for i in range(len(fileList)//4-1):
     image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
     markers2 = classifier.gradientTracking(image0, markerList[i], nbIter= nbIter)
     markerList.append(markers2)
 print('Done')
-
+os.nice(1)
 # Main treatment
 for fname in fnames:
+    print(fname)
     if fname[0]=='A' or fname[0]=='D':
         folder = 'polar'
     elif fname[0]=='I':
         folder = 'angle'
     elif fname[0] == 'S':
         folder = 'stokes'
-    else:
-        ()
-    markers=markersOrigin.copy()
     for i in range(len(fileList)//4-1):
         markers = markerList[i]
         markers2 = markerList[i+1]
@@ -96,7 +94,6 @@ for fname in fnames:
         labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on markers
         classifier.getConvexLabels(labels) # Convex hull of the labels, fuller regions
         timeList.append(time.time() - dt) # Stop the time measurement and append the result for further evalutation
-        '''
         ### Plotting ###
         plt.imshow(color.label2rgb(labels, image0), cmap = 'gray')
         plt.axis('off')
@@ -106,7 +103,6 @@ for fname in fnames:
         plt.plot(b,a, '+g', ms=6)
         plt.savefig('misc'+str(nfolder)+'/'+fname+str(i)+'.tiff')
         markers= markers2
-    '''
     
 ### Histogram of execution times
 plt.clf()
@@ -117,7 +113,6 @@ plt.axvline(1/30., color='b', linewidth=1)
 plt.axvline(0.1, color='b', linewidth=1)
 plt.text(1/30., np.max(hist), '30 fps')
 plt.text(0.10, np.max(hist), '10 fps')
-
 plt.xlabel('Time (s)')
 plt.legend([mean, median], ['Mean', 'Median'])
 print(np.mean(timeList))
