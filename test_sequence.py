@@ -96,6 +96,7 @@ for fname in fnames:
         labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on markers
         classifier.getConvexLabels(labels) # Convex hull of the labels, fuller regions
         timeList.append(time.time() - dt) # Stop the time measurement and append the result for further evalutation
+        '''
         ### Plotting ###
         plt.imshow(color.label2rgb(labels, image0), cmap = 'gray')
         plt.axis('off')
@@ -105,7 +106,7 @@ for fname in fnames:
         plt.plot(b,a, '+g', ms=6)
         plt.savefig('misc'+str(nfolder)+'/'+fname+str(i)+'.tiff')
         markers= markers2
-    
+    '''
     
 ### Histogram of execution times
 plt.clf()

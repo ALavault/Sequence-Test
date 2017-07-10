@@ -18,7 +18,7 @@ from skimage import color
 from skimage import filters
 from skimage import img_as_uint
 
-def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, sortDistances = False, noOrphans = False, hasMaxPoints = False, maxPoints =5000):
+def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None,hasMaxPoints = False, maxPoints =5000):
     """
     Inputs :
         - image : a grayscale image
@@ -36,7 +36,7 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
     """
     # TODO : Parallelize the process 
     seeds=seeds.astype(int)
-    toVisit=seeds.flatten()
+    toVisit=seeds.ravel()
     nIter=0
     nSeeds = len(seeds)
     nbRows, nbCols = image.shape
@@ -50,7 +50,7 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
             break
         #point=(toVisit[0], toVisit[1])
         x,y = int(toVisit[0]), int(toVisit[1])
-        seed= labels[x,y]
+        seed = labels[x,y]
         nIter+=1
         if nIter<=nSeeds:
             # Initialize the original seeds on matrix labels
@@ -66,31 +66,14 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
                 if isAcceptable((toVisit[0], toVisit[1]), candidate, labels, image, seeds, pixelThreshold, regionThreshold): # If it is acceptable,
                     # add it to the list containing the next points to be visited
                     toVisitNext.append(candidate)
-                    labels[candidate[0], candidate[1]]= seed
+                    labels[candidate[0], candidate[1]] = seed # Update the label matrix
             # Treatment of pixels to be visited        
             if toVisitNext is []: # no acceptable neighbour to visit next
                 # then remove the point being treated (the "seed")
                 toVisit = np.delete(toVisit,[0,1])
             else:
                 # Add the candidates to be visited in the order chosen
-                
                 toVisit = np.append(np.delete(toVisit,[0,1]),np.asarray(toVisitNext))
-    # Function to get every non labeled pixel to one of the labeled zones
-    if noOrphans:
-        # To avoid point with label = 0 pop : array[:-1] 
-        stack=[]
-        for x in range(nbRows):
-            for y in range(nbCols):
-                if labels[x,y]==0: #if the point is not labelled
-                    neighboursLabels=[labels[x,int(max(0,y-1))], labels[max(x-1,0),y], labels[x,min(nbCols-1,y+1)],labels[min(x+1,nbRows-1),y]]
-                    seed = getLabelled(neighboursLabels)
-                    if seed is None:
-                        stack.append((x,y))
-                    else:
-                        while stack !=[]:
-                            i,j = stack.pop(len(stack)-1)
-                            labels[i,j]= seed
-                        labels[x,y]=seed
             
     # Return an image containing all the labeled pixelss
     return labels
