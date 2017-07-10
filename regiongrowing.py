@@ -59,26 +59,22 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None, 
         else:
             # Beginning of the treatment
             neighboursList=[(x,max(0,y-1)), (max(x-1,0),y), (x,min(nbCols-1,y+1)), (min(x+1,nbRows-1),y), (max(x-1,0),max(0,y-1)), (max(x-1,0),min(nbCols-1,y+1)), (min(x+1,nbRows-1),min(nbCols-1,y+1)), (min(x+1,nbRows-1),max(0,y-1))] # L, T, R, B, TL, TR, BR, BL
-            distances=[]
-            # Create a the list of distances in regards of neighboursList
-            for candidate in neighboursList:
-                a,b = candidate
-                distances = np.append(distances, abs(int(image[x,y])-int(image[a,b])))
             toVisitNext=[]
             # Get all possible new points to visit
             for candidate in neighboursList:
                 # Test if the point currently processed is acceptable knowing the thresholds and forner labels
                 if isAcceptable((toVisit[0], toVisit[1]), candidate, labels, image, seeds, pixelThreshold, regionThreshold): # If it is acceptable,
                     # add it to the list containing the next points to be visited
-                    toVisitNext=np.append(toVisitNext, candidate)
+                    toVisitNext.append(candidate)
                     labels[candidate[0], candidate[1]]= seed
             # Treatment of pixels to be visited        
             if toVisitNext is []: # no acceptable neighbour to visit next
                 # then remove the point being treated (the "seed")
                 toVisit = np.delete(toVisit,[0,1])
             else:
-                # Add the candidates to be visited in the order chosen             
-                toVisit = np.append(np.delete(toVisit,[0,1]),toVisitNext)
+                # Add the candidates to be visited in the order chosen
+                
+                toVisit = np.append(np.delete(toVisit,[0,1]),np.asarray(toVisitNext))
     # Function to get every non labeled pixel to one of the labeled zones
     if noOrphans:
         # To avoid point with label = 0 pop : array[:-1] 
