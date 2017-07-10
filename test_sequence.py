@@ -30,7 +30,7 @@ plt.close('all')
 
 
 
-nfolder = 2
+nfolder = 1
 nbIter= 25
 
 fileList = os.listdir(os.getcwd()+'/move'+str(nfolder)+'-angle')
@@ -105,6 +105,7 @@ for fname in fnames:
         markers= markers2
     
 ### Histogram of execution times
+print('Done ')
 plt.clf()
 hist, bins, _ = plt.hist(timeList, bins = 200)
 mean = plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2, label = 'Mean')

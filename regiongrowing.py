@@ -73,10 +73,13 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None,h
             else:
                 # Add the candidates to be visited in the order chosen
                 toVisit = np.append(np.delete(toVisit,[0,1]),np.asarray(toVisitNext))
-            
     # Return an image containing all the labeled pixelss
     return labels
-            
+
+"""
+### Auxiliary Functions ###
+"""
+
 def isAcceptable(point, candidate,labels, image, seeds,pixelThreshold, regionThreshold):
     """
     Inputs :
@@ -116,7 +119,6 @@ def getLabelled(neighboursLabels):
         for k in toRemove:
             neighboursLabels.remove(k)
         counts = np.bincount(neighboursLabels)
-
         return np.argmax(counts)
     else:
         counts = np.bincount(neighboursLabels)
