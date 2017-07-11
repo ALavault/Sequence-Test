@@ -100,6 +100,7 @@ for fname in fnames:
         labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on markers
         sqtlbx.getConvexLabels(labels) # Convex hull of the labels, fuller regions
         timeList.append(time.time() - dt) # Stop the time measurement and append the result for further evalutation
+        """
         ### Plotting ###
         plt.imshow(color.label2rgb(labels, image0), cmap = 'gray')
         plt.axis('off')
@@ -109,7 +110,7 @@ for fname in fnames:
         plt.plot(b,a, '+g', ms=6)
         plt.savefig('misc'+str(nfolder)+'/'+fname+str(i)+'.tiff')
         markers= markers2
-    
+        """
 ### Histogram of execution times
 print('Processing Done')
 plt.clf()
@@ -121,5 +122,6 @@ plt.axvline(0.1, color='b', linewidth=1)
 plt.text(1/30., np.max(hist), '30 fps')
 plt.text(0.10, np.max(hist), '10 fps')
 plt.xlabel('Time (s)')
+plt.axvspan(np.mean(timeList)-np.std(timeList)/2, np.mean(timeList)+np.std(timeList)/2, color='black', alpha=0.25)
 plt.legend([mean, median], ['Mean', 'Median'])
 print('Average execution time : ' + str(np.mean(timeList)))
