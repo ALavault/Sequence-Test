@@ -17,13 +17,13 @@ from skimage import exposure
 
 def gradientDescent(gradient,markers, nIter=25):
     """
-    Naive 8 directions gradient descent.
+    Naive 8 directions gradient descent (this is not a gradient descent solution to solve linear systems)
     Inputs :
         - gradient : matrix representing the gradient to descend
         - nIter : Maximum number of iterations to descend
         - markers : List of coordinates representing the original seeds
     Output :
-        markers2 : a seed list of coordinates according to the descent (not in place)
+        markers2 : a list of coordinates according to the descent (not in place).
     """
     markers2 = markers.copy()
     w, h = gradient.shape
@@ -55,7 +55,6 @@ def resizeMarkers(markers, ratio):
     Output :
         newMarkers : resized markers as Numpy array
     """
-
     newMarkers = [[int(i*ratio), int(j*ratio)] for i,j in markers]
     return np.asarray(newMarkers)
 
@@ -96,20 +95,40 @@ def getConvexLabels(labels):
 def gradientTracking(image, markers, nbIter =25, selem = morphology.square(3), sigma = 1.5):
     """
     Generate the new markers given an image. 
+    First, it generates a gradient-like image according to the following steps :
+        1) Scharr filter
+        2) Sobel filter of (1)
+    This gets a approximation of laplacian operator.
+        3) morphological dilation
+        4) gaussian filter
     Note : AoP works best with this.
+    Inputs :
+        - image : original image.
+        - markers :original seeds (corrdinates like matrices i.e. [row, column])
+        - nbIter : optionnal, give the maximum number of iterations for the gradient descent
+        - selem : optionnal, the ele;ent used for dilation
+        - sigma : optionnal,
+    Outputs :
+        - markers2 : a list of coordinates according to the descent (not in place). These are the new seeds according to the gradient descent.
     """
     hog=filters.scharr(image)
     hog = filters.sobel(hog) # Edge detector of the edge detctor
     hog = morphology.dilation(hog, selem) # Dilation of the edge-edge detector
     hog = filters.gaussian(hog, sigma = sigma) # Filtering
-    hog = exposure.rescale_intensity(hog)
-    markers2 = markers.copy()
-    markers2 = gradientDescent(hog,markers2,nIter = nbIter)
+    markers2 = gradientDescent(hog,markers, nIter = nbIter)
     return markers2
 
 def extractPointsFromLabels(labels, useConvexHull = False):
     """
     Extract 2 points from each label.
+    The method chosen is simply taking the point at the top left corner of the  label and the point at the bottom right of the same label.
+    If the label is reduced to one point, the same point is added twice.
+    TODO : show a warning if such problem occurs
+    Inputs :
+        - labels : label inage obtained with any segmentation method. 0 is not considered as a valid label (background). Has N distinct labels.
+        - useConvexHull : optionnal, use original label or its convex hull depending of the value of this argument.
+    Outputs : 
+        - pointSet : format (N, 2). Each line represents two points from a same label.
     """
     # Generation of a convex hull of labeled regions if set to True
     props = measure.regionprops(labels)
@@ -119,6 +138,8 @@ def extractPointsFromLabels(labels, useConvexHull = False):
         for k in range(len(props)):
             min_row, min_col, max_row, max_col = bbox[k]
             labels[min_row:max_row, min_col:max_col] = (k+1)*cv[k]
+        props = measure.regionprops(labels)
+
     # Extract some points (top left and bottom right of the non convex region, 
     # simpler than searching the diameter but doesn't assure a maximized distance between the points)
     pointSet = []
