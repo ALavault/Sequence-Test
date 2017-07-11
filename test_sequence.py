@@ -25,7 +25,7 @@ from skimage import segmentation
 from skimage import util
 import time
 import regiongrowing as rg
-import seqtoolbox as classifier
+import seqtoolbox as sqtlbx
 plt.close('all')
 
 
@@ -61,7 +61,7 @@ print('Markers generation....')
 
 for i in range(len(fileList)//4-1):
     image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
-    markers2 = classifier.gradientTracking(image0, markerList[i], nbIter= nbIter)
+    markers2 = sqtlbx.gradientTracking(image0, markerList[i], nbIter= nbIter)
     markerList.append(markers2)
 print('Done')
 os.nice(1)
@@ -92,7 +92,7 @@ for fname in fnames:
         #image0 = exposure.rescale_intensity(image0) # Contrast enhancement (use the full dynamic according to the type of the image)
         ### Getting the segmented region ###
         labels = rg.regionGrowing(image0, markers, pixT, regT,hasMaxPoints = True, maxPoints =500) # Region growing based on markers
-        classifier.getConvexLabels(labels) # Convex hull of the labels, fuller regions
+        sqtlbx.getConvexLabels(labels) # Convex hull of the labels, fuller regions
         timeList.append(time.time() - dt) # Stop the time measurement and append the result for further evalutation
         ### Plotting ###
         plt.imshow(color.label2rgb(labels, image0), cmap = 'gray')

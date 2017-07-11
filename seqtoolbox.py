@@ -78,7 +78,12 @@ def labelExtractor(labels, markers):
                 
 def getConvexLabels(labels):
     """
-    Give the convex hull of given labels. 0 means background and so is not processed.
+    Give the convex hull of given labels. 0 means background and so it is not processed.
+    Inputs :
+        - labels : an image/2D array containing labeled regions
+    Output : 
+        - labels : modified labels
+    Note : this treatment is done in place
     """
     props = measure.regionprops(labels)
     bbox = [ props[k].bbox for k in range(len(props))]
@@ -89,6 +94,10 @@ def getConvexLabels(labels):
     return labels
 
 def gradientTracking(image, markers, nbIter =25, selem = morphology.square(3), sigma = 1.5):
+    """
+    Generate the new markers given an image. 
+    Note : AoP works best with this.
+    """
     hog=filters.scharr(image)
     hog = filters.sobel(hog) # Edge detector of the edge detctor
     hog = morphology.dilation(hog, selem) # Dilation of the edge-edge detector
@@ -97,3 +106,25 @@ def gradientTracking(image, markers, nbIter =25, selem = morphology.square(3), s
     markers2 = markers.copy()
     markers2 = gradientDescent(hog,markers2,nIter = nbIter)
     return markers2
+
+def extractPointsFromLabels(labels, useConvexHull = False):
+    """
+    Extract 2 points from each label.
+    """
+    # Generation of a convex hull of labeled regions if set to True
+    props = measure.regionprops(labels)
+    if useConvexHull:
+        bbox = [ props[k].bbox for k in range(len(props))]
+        cv = [ props[k].convex_image for k in range(len(props))]
+        for k in range(len(props)):
+            min_row, min_col, max_row, max_col = bbox[k]
+            labels[min_row:max_row, min_col:max_col] = (k+1)*cv[k]
+    # Extract some points (top left and bottom right of the non convex region, 
+    # simpler than searching the diameter but doesn't assure a maximized distance between the points)
+    pointSet = []
+    for k in range(len(props)):
+        p1, p2 = props[k].coords[0], props[k].coords[-1]
+        pointSet.append([p1, p2])
+    return pointSet        
+
+        
