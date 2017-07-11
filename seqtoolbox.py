@@ -11,7 +11,6 @@ import numpy as np
 from skimage import measure
 from skimage import filters
 from skimage import morphology
-from skimage import exposure
 
 
 
@@ -60,7 +59,8 @@ def resizeMarkers(markers, ratio):
 
 def labelExtractor(labels, markers):
     """
-    Extract labeled area where the markers are.
+    Extract labeled area where the markers are. Useful when a lot of regions are segmented (e.g Superpixel algorithm).
+    The extraction consists in making non marked labels part of the background.
     Inputs :
         - labels : an image/2D array containing labeled regions
         - markers : seeds to test
@@ -110,6 +110,8 @@ def gradientTracking(image, markers, nbIter =25, selem = morphology.square(3), s
         - sigma : optionnal,
     Outputs :
         - markers2 : a list of coordinates according to the descent (not in place). These are the new seeds according to the gradient descent.
+        
+    TODO : make the process more customizable.
     """
     hog=filters.scharr(image)
     hog = filters.sobel(hog) # Edge detector of the edge detctor

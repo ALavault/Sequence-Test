@@ -4,6 +4,8 @@
 Created on Tue Jun 28 15:24:31 2017
 @author: viper
 Description : Test of segmentation of a sequence of images
+    This is just a script made to test if the gradient tracking and the segmentation could work together.
+    This file also gives after the whole treatment an histogram of the execution time of the treatment (without the marker generation)
 """
 from __future__ import print_function
 import os
@@ -30,8 +32,8 @@ plt.close('all')
 
 
 
-nfolder = 1
-nbIter= 25
+nfolder = 3
+nbIter= 20
 
 fileList = os.listdir(os.getcwd()+'/move'+str(nfolder)+'-angle')
 fileList.sort()
@@ -50,22 +52,26 @@ for i in range(len(markers)): # Convert the seeds in order to be used with Numpy
     markers[i]=[y_,x_]
 markers.astype(int) # Integer coordinates
 plt.close('all')
+
 # A few constants
 fnames=['AoP_','DoP_' , 'I0_', 'I45_', 'I90_', 'I135_','S0_', 'S1_', 'S2_']
 markersOrigin = markers.copy()
 markerList=[markers]
 timeList=[]
 square = morphology.square(3)
-# Markers generation using AoP -> the most robust of all images for this
-print('Markers generation....')
+
+# Markers generation using AoP -> the most robust of all images for this and simulate a kind of parallel treatment.
+print('Markers generation')
 
 for i in range(len(fileList)//4-1):
     image0 = io.imread('move'+str(nfolder)+'-polar/AoP_'+str(i)+'.tiff')
     markers2 = sqtlbx.gradientTracking(image0, markerList[i], nbIter= nbIter)
     markerList.append(markers2)
-print('Done')
+    
+print('Markers generated')
 os.nice(1)
 # Main treatment
+print('Processing...')
 for fname in fnames:
     print(fname)
     if fname[0]=='A' or fname[0]=='D':
@@ -83,11 +89,11 @@ for fname in fnames:
             regT = 6
             pixT= regT
         else:
-            regT = 10*2**8
+            regT = 6*2**8
             pixT= regT
         plt.clf() # Clear the figure
-        dt = time.time() # Launch the time measurement
         ### Open image ###
+        dt = time.time() # Launch the time measurement
         image0 = io.imread('move'+str(nfolder)+'-'+folder+'/'+fname+str(i)+'.tiff')
         #image0 = exposure.rescale_intensity(image0) # Contrast enhancement (use the full dynamic according to the type of the image)
         ### Getting the segmented region ###
@@ -105,7 +111,7 @@ for fname in fnames:
         markers= markers2
     
 ### Histogram of execution times
-print('Done ')
+print('Processing Done')
 plt.clf()
 hist, bins, _ = plt.hist(timeList, bins = 200)
 mean = plt.axvline(np.mean(timeList), color='b', linestyle='dashed', linewidth=2, label = 'Mean')
@@ -116,4 +122,4 @@ plt.text(1/30., np.max(hist), '30 fps')
 plt.text(0.10, np.max(hist), '10 fps')
 plt.xlabel('Time (s)')
 plt.legend([mean, median], ['Mean', 'Median'])
-print(np.mean(timeList))
+print('Average execution time : ' + str(np.mean(timeList)))

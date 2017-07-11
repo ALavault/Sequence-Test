@@ -32,8 +32,9 @@ def regionGrowing(image, seeds, pixelThreshold, regionThreshold, labels = None,h
         labels : a matrix of segmented regions
     Description : 
         regionGrowing implements a region-growing like algorithm to segment an image
+    
     """
-    # TODO : Parallelize the process 
+    # TODO : Parallelize the process by labels (seems the easiest way). Test what data structure works the best with the algorithm.
     seeds=seeds.astype(int)
     toVisit=seeds.ravel()
     nIter=0
